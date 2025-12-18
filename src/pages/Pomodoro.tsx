@@ -133,34 +133,61 @@ export default function Pomodoro() {
   // 白噪音加载状态
   const [soundLoading, setSoundLoading] = useState(false);
   const [soundError, setSoundError] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // 白噪音控制
   const playSound = useCallback((soundId: string) => {
     const sound = WHITE_NOISE_SOUNDS.find(s => s.id === soundId);
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     setSoundError(null);
+    
+    // 先停止当前音频
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+      audioRef.current = null;
+    }
+    setIsPlaying(false);
+    
     if (sound && sound.url) {
       setSoundLoading(true);
-      const audio = new Audio(sound.url);
+      const audio = new Audio();
       audio.loop = true;
       audio.volume = soundVolume / 100;
-      audio.oncanplaythrough = () => setSoundLoading(false);
+      audio.preload = 'auto';
+      
+      // 等待音频加载完成后再播放
+      audio.oncanplaythrough = () => {
+        setSoundLoading(false);
+        audio.play()
+          .then(() => setIsPlaying(true))
+          .catch((e) => {
+            // 忽略被中断的播放错误
+            if (e.name !== 'AbortError') {
+              setSoundError('播放失败，请重试');
+            }
+          });
+      };
+      
       audio.onerror = () => {
         setSoundLoading(false);
         setSoundError('音频加载失败，请尝试其他音效');
       };
-      audio.play().catch((e) => {
-        setSoundLoading(false);
-        setSoundError('播放失败: ' + e.message);
-      });
+      
+      audio.src = sound.url;
       audioRef.current = audio;
     }
     setCurrentSound(soundId);
   }, [soundVolume]);
 
   const stopSound = useCallback(() => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+      audioRef.current = null;
+    }
     setCurrentSound('none');
+    setIsPlaying(false);
+    setSoundLoading(false);
   }, []);
 
   // 音量变化时更新
@@ -295,15 +322,21 @@ export default function Pomodoro() {
                   <span className={`text-xs ${themeConfig.textSecondary} w-8`}>{soundVolume}%</span>
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <button onClick={() => currentSound !== 'none' && playSound(currentSound)} disabled={currentSound === 'none'} 
+                  <button onClick={() => currentSound !== 'none' && playSound(currentSound)} disabled={currentSound === 'none' || soundLoading} 
                     className="flex-1 px-3 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg text-xs disabled:opacity-50 hover:bg-cyan-500/30 transition-all">
-                    ▶ 试听
+                    {soundLoading ? '⏳ 加载中...' : '▶ 试听'}
                   </button>
-                  <button onClick={stopSound} disabled={!audioRef.current}
+                  <button onClick={stopSound} disabled={!isPlaying && !soundLoading}
                     className="flex-1 px-3 py-2 bg-slate-600/50 text-slate-300 rounded-lg text-xs disabled:opacity-50 hover:bg-slate-600 transition-all">
                     ⏹ 停止
                   </button>
                 </div>
+                {isPlaying && (
+                  <div className="mt-2 p-2 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400 text-xs flex items-center gap-2">
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+                    正在播放: {WHITE_NOISE_SOUNDS.find(s => s.id === currentSound)?.name}
+                  </div>
+                )}
                 <p className={`text-xs ${themeConfig.textSecondary} mt-2`}>💡 开始计时后自动播放选中的音效</p>
               </div>
             )}

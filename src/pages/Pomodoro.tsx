@@ -20,17 +20,157 @@ type TimerState = 'idle' | 'running' | 'paused';
 const WORK_PRESETS = [15, 25, 30, 45, 60];
 const BREAK_PRESETS = [5, 10, 15, 20];
 
-// 白噪音音效 - 使用 freesound.org 和其他可靠免费音效源
+// 白噪音类型 - 使用 Web Audio API 生成
 const WHITE_NOISE_SOUNDS = [
-  { id: 'none', name: '无', icon: '🔇', url: '' },
-  { id: 'rain', name: '雨声', icon: '🌧️', url: 'https://soundbible.com/mp3/Rain-SoundBible.com-2065240612.mp3' },
-  { id: 'forest', name: '森林', icon: '🌲', url: 'https://soundbible.com/mp3/meadowlark_daniel-simion.mp3' },
-  { id: 'ocean', name: '海浪', icon: '🌊', url: 'https://soundbible.com/mp3/Ocean_Waves-Mike_Koenig-980635527.mp3' },
-  { id: 'fire', name: '篝火', icon: '🔥', url: 'https://soundbible.com/mp3/Campfire-SoundBible.com-1933587658.mp3' },
-  { id: 'wind', name: '微风', icon: '🍃', url: 'https://soundbible.com/mp3/Wind-Mark_DiAngelo-1940285615.mp3' },
-  { id: 'stream', name: '溪流', icon: '💧', url: 'https://soundbible.com/mp3/Small_Waterfall-Stephan_Schutze-1811758364.mp3' },
-  { id: 'thunder', name: '雷雨', icon: '⛈️', url: 'https://soundbible.com/mp3/Thunder_Crack-Stickinthemud-1910420960.mp3' },
+  { id: 'none', name: '无', icon: '🔇' },
+  { id: 'white', name: '白噪音', icon: '📻' },
+  { id: 'pink', name: '粉噪音', icon: '🌸' },
+  { id: 'brown', name: '棕噪音', icon: '🍂' },
+  { id: 'rain', name: '雨声', icon: '🌧️' },
+  { id: 'wind', name: '风声', icon: '🍃' },
+  { id: 'wave', name: '海浪', icon: '🌊' },
+  { id: 'fire', name: '篝火', icon: '🔥' },
 ];
+
+// 创建噪音生成器
+const createNoiseGenerator = (audioCtx: AudioContext, type: string, volume: number) => {
+  const gainNode = audioCtx.createGain();
+  gainNode.gain.value = volume;
+  gainNode.connect(audioCtx.destination);
+
+  if (type === 'white' || type === 'pink' || type === 'brown') {
+    // 生成噪音
+    const bufferSize = 2 * audioCtx.sampleRate;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      
+      if (type === 'white') {
+        output[i] = white * 0.5;
+      } else if (type === 'pink') {
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+        b6 = white * 0.115926;
+      } else if (type === 'brown') {
+        output[i] = (b0 = (b0 + (0.02 * white)) / 1.02) * 3.5;
+      }
+    }
+    
+    const whiteNoise = audioCtx.createBufferSource();
+    whiteNoise.buffer = noiseBuffer;
+    whiteNoise.loop = true;
+    whiteNoise.connect(gainNode);
+    return { source: whiteNoise, gain: gainNode };
+  } else {
+    // 模拟自然声音（使用多个振荡器和滤波器）
+    const oscillators: OscillatorNode[] = [];
+    const filters: BiquadFilterNode[] = [];
+    
+    if (type === 'rain') {
+      // 雨声：高频噪音 + 低通滤波
+      const bufferSize = 2 * audioCtx.sampleRate;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+      
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      noise.loop = true;
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 4000;
+      filters.push(filter);
+      
+      noise.connect(filter);
+      filter.connect(gainNode);
+      return { source: noise, gain: gainNode, filters };
+    } else if (type === 'wind') {
+      // 风声：低频噪音 + 调制
+      const bufferSize = 2 * audioCtx.sampleRate;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      let lastOut = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        output[i] = (lastOut + (0.1 * white)) / 1.1;
+        lastOut = output[i];
+        output[i] *= 3;
+      }
+      
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      noise.loop = true;
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 500;
+      filter.Q.value = 0.5;
+      filters.push(filter);
+      
+      noise.connect(filter);
+      filter.connect(gainNode);
+      return { source: noise, gain: gainNode, filters };
+    } else if (type === 'wave') {
+      // 海浪：周期性的噪音
+      const bufferSize = 4 * audioCtx.sampleRate;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        const t = i / audioCtx.sampleRate;
+        const envelope = 0.5 + 0.5 * Math.sin(2 * Math.PI * t / 8); // 8秒周期
+        output[i] = (Math.random() * 2 - 1) * envelope;
+      }
+      
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      noise.loop = true;
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 1500;
+      filters.push(filter);
+      
+      noise.connect(filter);
+      filter.connect(gainNode);
+      return { source: noise, gain: gainNode, filters };
+    } else if (type === 'fire') {
+      // 篝火：噼啪声
+      const bufferSize = 2 * audioCtx.sampleRate;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        const crackle = Math.random() > 0.997 ? (Math.random() * 2 - 1) * 0.5 : 0;
+        output[i] = (Math.random() * 2 - 1) * 0.1 + crackle;
+      }
+      
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      noise.loop = true;
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 800;
+      filter.Q.value = 1;
+      filters.push(filter);
+      
+      noise.connect(filter);
+      filter.connect(gainNode);
+      return { source: noise, gain: gainNode, filters };
+    }
+    
+    return { source: null, gain: gainNode, oscillators, filters };
+  }
+};
 
 export default function Pomodoro() {
   const { sessionToken } = useAuthStore();
@@ -53,9 +193,10 @@ export default function Pomodoro() {
   const intervalRef = useRef<number | null>(null);
   // 白噪音
   const [currentSound, setCurrentSound] = useState('none');
-  const [soundVolume, setSoundVolume] = useState(50);
+  const [soundVolume, setSoundVolume] = useState(30);
   const [showSoundPanel, setShowSoundPanel] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const noiseSourceRef = useRef<{ source: AudioBufferSourceNode | null; gain: GainNode; filters?: BiquadFilterNode[] } | null>(null);
 
   const loadHistory = async () => {
     if (!sessionToken) return;
@@ -130,69 +271,59 @@ export default function Pomodoro() {
   const handleSetCustomWork = () => { const t = parseInt(customWorkTime); if (t > 0 && t <= 120) { setWorkDuration(t); setCustomWorkTime(''); } };
   const handleSetCustomBreak = () => { const t = parseInt(customBreakTime); if (t > 0 && t <= 60) { setBreakDuration(t); setCustomBreakTime(''); } };
 
-  // 白噪音加载状态
-  const [soundLoading, setSoundLoading] = useState(false);
-  const [soundError, setSoundError] = useState<string | null>(null);
+  // 白噪音状态
   const [isPlaying, setIsPlaying] = useState(false);
 
   // 白噪音控制
   const playSound = useCallback((soundId: string) => {
-    const sound = WHITE_NOISE_SOUNDS.find(s => s.id === soundId);
-    setSoundError(null);
-    
     // 先停止当前音频
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
-      audioRef.current = null;
+    if (noiseSourceRef.current?.source) {
+      try { noiseSourceRef.current.source.stop(); } catch {}
     }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close();
+      audioCtxRef.current = null;
+    }
+    noiseSourceRef.current = null;
     setIsPlaying(false);
     
-    if (sound && sound.url) {
-      setSoundLoading(true);
-      const audio = new Audio();
-      audio.loop = true;
-      audio.volume = soundVolume / 100;
-      audio.preload = 'auto';
-      
-      // 等待音频加载完成后再播放
-      audio.oncanplaythrough = () => {
-        setSoundLoading(false);
-        audio.play()
-          .then(() => setIsPlaying(true))
-          .catch((e) => {
-            // 忽略被中断的播放错误
-            if (e.name !== 'AbortError') {
-              setSoundError('播放失败，请重试');
-            }
-          });
-      };
-      
-      audio.onerror = () => {
-        setSoundLoading(false);
-        setSoundError('音频加载失败，请尝试其他音效');
-      };
-      
-      audio.src = sound.url;
-      audioRef.current = audio;
+    if (soundId !== 'none') {
+      try {
+        const audioCtx = new AudioContext();
+        audioCtxRef.current = audioCtx;
+        
+        const noiseGen = createNoiseGenerator(audioCtx, soundId, soundVolume / 100);
+        noiseSourceRef.current = noiseGen;
+        
+        if (noiseGen.source) {
+          noiseGen.source.start();
+          setIsPlaying(true);
+        }
+      } catch (e) {
+        console.error('音频播放失败:', e);
+      }
     }
     setCurrentSound(soundId);
   }, [soundVolume]);
 
   const stopSound = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
-      audioRef.current = null;
+    if (noiseSourceRef.current?.source) {
+      try { noiseSourceRef.current.source.stop(); } catch {}
     }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close();
+      audioCtxRef.current = null;
+    }
+    noiseSourceRef.current = null;
     setCurrentSound('none');
     setIsPlaying(false);
-    setSoundLoading(false);
   }, []);
 
   // 音量变化时更新
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = soundVolume / 100;
+    if (noiseSourceRef.current?.gain) {
+      noiseSourceRef.current.gain.gain.value = soundVolume / 100;
+    }
   }, [soundVolume]);
 
   // 计时器停止时停止音效
@@ -293,40 +424,29 @@ export default function Pomodoro() {
             {showSoundPanel && (
               <div className={`mb-4 p-4 ${themeConfig.bgSecondary} rounded-xl border ${themeConfig.border}`}>
                 <div className="flex justify-between items-center mb-3">
-                  <span className={`text-sm font-medium ${themeConfig.text}`}>🎵 选择背景音</span>
+                  <span className={`text-sm font-medium ${themeConfig.text}`}>🎵 选择背景音（本地生成，无需网络）</span>
                   <button onClick={() => setShowSoundPanel(false)} className={`${themeConfig.textSecondary} hover:${themeConfig.text}`}>✕</button>
                 </div>
-                {soundError && (
-                  <div className="mb-3 p-2 bg-rose-500/20 border border-rose-500/30 rounded-lg text-rose-400 text-xs">
-                    ⚠️ {soundError}
-                  </div>
-                )}
-                {soundLoading && (
-                  <div className="mb-3 p-2 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 text-xs flex items-center gap-2">
-                    <span className="w-3 h-3 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin"></span>
-                    加载音效中...
-                  </div>
-                )}
                 <div className="grid grid-cols-4 gap-2 mb-3">
                   {WHITE_NOISE_SOUNDS.map(sound => (
-                    <button key={sound.id} onClick={() => sound.id === 'none' ? stopSound() : (state !== 'idle' ? playSound(sound.id) : setCurrentSound(sound.id))}
-                      className={`p-2 rounded-lg text-center transition-all ${currentSound === sound.id ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : `${themeConfig.bgSecondary} ${themeConfig.textSecondary} border ${themeConfig.border} hover:border-cyan-500/30`}`}>
+                    <button key={sound.id} onClick={() => sound.id === 'none' ? stopSound() : playSound(sound.id)}
+                      className={`p-2 rounded-lg text-center transition-all ${currentSound === sound.id && isPlaying ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : currentSound === sound.id ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30' : `${themeConfig.bgSecondary} ${themeConfig.textSecondary} border ${themeConfig.border} hover:border-cyan-500/30`}`}>
                       <div className="text-xl mb-1">{sound.icon}</div>
                       <div className="text-xs">{sound.name}</div>
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 mb-3">
                   <span className={`text-xs ${themeConfig.textSecondary}`}>🔊</span>
                   <input type="range" min="0" max="100" value={soundVolume} onChange={(e) => setSoundVolume(Number(e.target.value))} className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
                   <span className={`text-xs ${themeConfig.textSecondary} w-8`}>{soundVolume}%</span>
                 </div>
-                <div className="mt-3 flex gap-2">
-                  <button onClick={() => currentSound !== 'none' && playSound(currentSound)} disabled={currentSound === 'none' || soundLoading} 
+                <div className="flex gap-2">
+                  <button onClick={() => currentSound !== 'none' && playSound(currentSound)} disabled={currentSound === 'none'} 
                     className="flex-1 px-3 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg text-xs disabled:opacity-50 hover:bg-cyan-500/30 transition-all">
-                    {soundLoading ? '⏳ 加载中...' : '▶ 试听'}
+                    ▶ 播放
                   </button>
-                  <button onClick={stopSound} disabled={!isPlaying && !soundLoading}
+                  <button onClick={stopSound} disabled={!isPlaying}
                     className="flex-1 px-3 py-2 bg-slate-600/50 text-slate-300 rounded-lg text-xs disabled:opacity-50 hover:bg-slate-600 transition-all">
                     ⏹ 停止
                   </button>
@@ -337,7 +457,7 @@ export default function Pomodoro() {
                     正在播放: {WHITE_NOISE_SOUNDS.find(s => s.id === currentSound)?.name}
                   </div>
                 )}
-                <p className={`text-xs ${themeConfig.textSecondary} mt-2`}>💡 开始计时后自动播放选中的音效</p>
+                <p className={`text-xs ${themeConfig.textSecondary} mt-2`}>💡 点击音效即可试听，计时时会自动播放</p>
               </div>
             )}
 

@@ -20,16 +20,16 @@ type TimerState = 'idle' | 'running' | 'paused';
 const WORK_PRESETS = [15, 25, 30, 45, 60];
 const BREAK_PRESETS = [5, 10, 15, 20];
 
-// 白噪音音效 - 使用免费音效URL
+// 白噪音音效 - 使用 freesound.org 和其他可靠免费音效源
 const WHITE_NOISE_SOUNDS = [
   { id: 'none', name: '无', icon: '🔇', url: '' },
-  { id: 'rain', name: '雨声', icon: '🌧️', url: 'https://cdn.pixabay.com/audio/2022/05/13/audio_257112181d.mp3' },
-  { id: 'forest', name: '森林', icon: '🌲', url: 'https://cdn.pixabay.com/audio/2022/03/10/audio_4dedf5bf94.mp3' },
-  { id: 'ocean', name: '海浪', icon: '🌊', url: 'https://cdn.pixabay.com/audio/2022/06/07/audio_b9bd4170e4.mp3' },
-  { id: 'fire', name: '篝火', icon: '🔥', url: 'https://cdn.pixabay.com/audio/2021/08/09/audio_dc39bde808.mp3' },
-  { id: 'wind', name: '微风', icon: '🍃', url: 'https://cdn.pixabay.com/audio/2022/10/30/audio_6b6c2f9c9e.mp3' },
-  { id: 'cafe', name: '咖啡厅', icon: '☕', url: 'https://cdn.pixabay.com/audio/2022/03/24/audio_4c58bc7ccc.mp3' },
-  { id: 'thunder', name: '雷雨', icon: '⛈️', url: 'https://cdn.pixabay.com/audio/2022/03/15/audio_942966f51e.mp3' },
+  { id: 'rain', name: '雨声', icon: '🌧️', url: 'https://soundbible.com/mp3/Rain-SoundBible.com-2065240612.mp3' },
+  { id: 'forest', name: '森林', icon: '🌲', url: 'https://soundbible.com/mp3/meadowlark_daniel-simion.mp3' },
+  { id: 'ocean', name: '海浪', icon: '🌊', url: 'https://soundbible.com/mp3/Ocean_Waves-Mike_Koenig-980635527.mp3' },
+  { id: 'fire', name: '篝火', icon: '🔥', url: 'https://soundbible.com/mp3/Campfire-SoundBible.com-1933587658.mp3' },
+  { id: 'wind', name: '微风', icon: '🍃', url: 'https://soundbible.com/mp3/Wind-Mark_DiAngelo-1940285615.mp3' },
+  { id: 'stream', name: '溪流', icon: '💧', url: 'https://soundbible.com/mp3/Small_Waterfall-Stephan_Schutze-1811758364.mp3' },
+  { id: 'thunder', name: '雷雨', icon: '⛈️', url: 'https://soundbible.com/mp3/Thunder_Crack-Stickinthemud-1910420960.mp3' },
 ];
 
 export default function Pomodoro() {
@@ -130,15 +130,29 @@ export default function Pomodoro() {
   const handleSetCustomWork = () => { const t = parseInt(customWorkTime); if (t > 0 && t <= 120) { setWorkDuration(t); setCustomWorkTime(''); } };
   const handleSetCustomBreak = () => { const t = parseInt(customBreakTime); if (t > 0 && t <= 60) { setBreakDuration(t); setCustomBreakTime(''); } };
 
+  // 白噪音加载状态
+  const [soundLoading, setSoundLoading] = useState(false);
+  const [soundError, setSoundError] = useState<string | null>(null);
+
   // 白噪音控制
   const playSound = useCallback((soundId: string) => {
     const sound = WHITE_NOISE_SOUNDS.find(s => s.id === soundId);
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    setSoundError(null);
     if (sound && sound.url) {
+      setSoundLoading(true);
       const audio = new Audio(sound.url);
       audio.loop = true;
       audio.volume = soundVolume / 100;
-      audio.play().catch(() => {});
+      audio.oncanplaythrough = () => setSoundLoading(false);
+      audio.onerror = () => {
+        setSoundLoading(false);
+        setSoundError('音频加载失败，请尝试其他音效');
+      };
+      audio.play().catch((e) => {
+        setSoundLoading(false);
+        setSoundError('播放失败: ' + e.message);
+      });
       audioRef.current = audio;
     }
     setCurrentSound(soundId);
@@ -255,9 +269,20 @@ export default function Pomodoro() {
                   <span className={`text-sm font-medium ${themeConfig.text}`}>🎵 选择背景音</span>
                   <button onClick={() => setShowSoundPanel(false)} className={`${themeConfig.textSecondary} hover:${themeConfig.text}`}>✕</button>
                 </div>
+                {soundError && (
+                  <div className="mb-3 p-2 bg-rose-500/20 border border-rose-500/30 rounded-lg text-rose-400 text-xs">
+                    ⚠️ {soundError}
+                  </div>
+                )}
+                {soundLoading && (
+                  <div className="mb-3 p-2 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 text-xs flex items-center gap-2">
+                    <span className="w-3 h-3 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin"></span>
+                    加载音效中...
+                  </div>
+                )}
                 <div className="grid grid-cols-4 gap-2 mb-3">
                   {WHITE_NOISE_SOUNDS.map(sound => (
-                    <button key={sound.id} onClick={() => state !== 'idle' ? playSound(sound.id) : setCurrentSound(sound.id)}
+                    <button key={sound.id} onClick={() => sound.id === 'none' ? stopSound() : (state !== 'idle' ? playSound(sound.id) : setCurrentSound(sound.id))}
                       className={`p-2 rounded-lg text-center transition-all ${currentSound === sound.id ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : `${themeConfig.bgSecondary} ${themeConfig.textSecondary} border ${themeConfig.border} hover:border-cyan-500/30`}`}>
                       <div className="text-xl mb-1">{sound.icon}</div>
                       <div className="text-xs">{sound.name}</div>
@@ -269,7 +294,17 @@ export default function Pomodoro() {
                   <input type="range" min="0" max="100" value={soundVolume} onChange={(e) => setSoundVolume(Number(e.target.value))} className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
                   <span className={`text-xs ${themeConfig.textSecondary} w-8`}>{soundVolume}%</span>
                 </div>
-                <p className={`text-xs ${themeConfig.textSecondary} mt-2`}>💡 开始计时后自动播放</p>
+                <div className="mt-3 flex gap-2">
+                  <button onClick={() => currentSound !== 'none' && playSound(currentSound)} disabled={currentSound === 'none'} 
+                    className="flex-1 px-3 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg text-xs disabled:opacity-50 hover:bg-cyan-500/30 transition-all">
+                    ▶ 试听
+                  </button>
+                  <button onClick={stopSound} disabled={!audioRef.current}
+                    className="flex-1 px-3 py-2 bg-slate-600/50 text-slate-300 rounded-lg text-xs disabled:opacity-50 hover:bg-slate-600 transition-all">
+                    ⏹ 停止
+                  </button>
+                </div>
+                <p className={`text-xs ${themeConfig.textSecondary} mt-2`}>💡 开始计时后自动播放选中的音效</p>
               </div>
             )}
 

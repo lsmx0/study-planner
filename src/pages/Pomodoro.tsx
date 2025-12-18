@@ -199,6 +199,8 @@ export default function Pomodoro() {
   const noiseSourceRef = useRef<{ source: AudioBufferSourceNode | null; gain: GainNode; filters?: BiquadFilterNode[] } | null>(null);
   // 专注模式
   const [focusMode, setFocusMode] = useState(false);
+  const [focusWarning, setFocusWarning] = useState(false);
+  const [distractionCount, setDistractionCount] = useState(0);
 
   const loadHistory = async () => {
     if (!sessionToken) return;
@@ -350,6 +352,31 @@ export default function Pomodoro() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [state]);
+
+  // 专注模式：窗口失焦检测
+  useEffect(() => {
+    if (!focusMode || state !== 'running') return;
+    
+    const handleBlur = () => {
+      setFocusWarning(true);
+      setDistractionCount(prev => prev + 1);
+      // 3秒后自动关闭警告
+      setTimeout(() => setFocusWarning(false), 3000);
+    };
+    
+    const handleFocus = () => {
+      // 窗口重新获得焦点时关闭警告
+      setFocusWarning(false);
+    };
+    
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [focusMode, state]);
 
   return (
     <div className="h-full flex flex-col">
@@ -548,6 +575,14 @@ export default function Pomodoro() {
       {/* 专注模式 - 全屏锁定界面 */}
       {focusMode && (
         <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center">
+          {/* 分心警告 */}
+          {focusWarning && (
+            <div className="fixed top-0 left-0 right-0 z-[110] bg-gradient-to-r from-rose-600 to-orange-600 p-4 text-center animate-pulse">
+              <div className="text-white text-xl font-bold">⚠️ 请保持专注！不要切换到其他应用！</div>
+              <div className="text-white/80 text-sm">已分心 {distractionCount} 次</div>
+            </div>
+          )}
+
           {/* 背景动画 */}
           <div className="absolute inset-0 overflow-hidden">
             <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse"></div>
@@ -560,6 +595,9 @@ export default function Pomodoro() {
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-white mb-2">🔒 专注模式</h1>
               <p className="text-slate-400">心无旁骛，全力以赴</p>
+              {distractionCount > 0 && state === 'running' && (
+                <p className="text-amber-400 text-sm mt-2">⚠️ 本次已分心 {distractionCount} 次</p>
+              )}
             </div>
 
             {/* 大计时器 */}
@@ -658,7 +696,7 @@ export default function Pomodoro() {
 
             {/* 退出按钮 - 只有在空闲状态才能退出 */}
             {state === 'idle' ? (
-              <button onClick={() => setFocusMode(false)} className="px-6 py-3 text-slate-400 hover:text-white transition-all flex items-center gap-2 mx-auto">
+              <button onClick={() => { setFocusMode(false); setDistractionCount(0); }} className="px-6 py-3 text-slate-400 hover:text-white transition-all flex items-center gap-2 mx-auto">
                 ← 退出专注模式
               </button>
             ) : (

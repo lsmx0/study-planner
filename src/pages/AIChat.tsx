@@ -239,11 +239,32 @@ export default function AIChat() {
                 <label className="block text-sm font-medium text-slate-300 mb-2">模型选择</label>
                 <select value={modelName} onChange={(e) => setModelName(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white">
-                  <option value="Qwen/Qwen2.5-7B-Instruct">Qwen2.5-7B-Instruct (免费)</option>
-                  <option value="Qwen/Qwen2.5-14B-Instruct">Qwen2.5-14B-Instruct</option>
-                  <option value="Qwen/Qwen2.5-72B-Instruct">Qwen2.5-72B-Instruct</option>
-                  <option value="deepseek-ai/DeepSeek-V2.5">DeepSeek-V2.5</option>
+                  <optgroup label="🆓 免费模型">
+                    <option value="Qwen/Qwen2.5-7B-Instruct">Qwen2.5-7B-Instruct</option>
+                    <option value="Qwen/Qwen2.5-Coder-7B-Instruct">Qwen2.5-Coder-7B (编程)</option>
+                    <option value="THUDM/glm-4-9b-chat">GLM-4-9B-Chat</option>
+                    <option value="internlm/internlm2_5-7b-chat">InternLM2.5-7B-Chat</option>
+                  </optgroup>
+                  <optgroup label="⭐ 通义千问系列">
+                    <option value="Qwen/Qwen2.5-14B-Instruct">Qwen2.5-14B-Instruct</option>
+                    <option value="Qwen/Qwen2.5-32B-Instruct">Qwen2.5-32B-Instruct</option>
+                    <option value="Qwen/Qwen2.5-72B-Instruct">Qwen2.5-72B-Instruct</option>
+                    <option value="Qwen/Qwen2.5-Coder-32B-Instruct">Qwen2.5-Coder-32B (编程)</option>
+                    <option value="Qwen/QwQ-32B-Preview">QwQ-32B-Preview (推理)</option>
+                  </optgroup>
+                  <optgroup label="🔥 DeepSeek 系列">
+                    <option value="deepseek-ai/DeepSeek-V2.5">DeepSeek-V2.5</option>
+                    <option value="deepseek-ai/DeepSeek-V3">DeepSeek-V3 (最新)</option>
+                    <option value="deepseek-ai/DeepSeek-Coder-V2-Instruct">DeepSeek-Coder-V2 (编程)</option>
+                  </optgroup>
+                  <optgroup label="🌟 其他模型">
+                    <option value="THUDM/glm-4-9b-chat">GLM-4-9B-Chat</option>
+                    <option value="01-ai/Yi-1.5-34B-Chat">Yi-1.5-34B-Chat</option>
+                    <option value="meta-llama/Meta-Llama-3.1-70B-Instruct">Llama-3.1-70B</option>
+                    <option value="meta-llama/Meta-Llama-3.1-405B-Instruct">Llama-3.1-405B</option>
+                  </optgroup>
                 </select>
+                <p className="text-xs text-slate-500 mt-2">💡 免费模型适合日常使用，大模型效果更好但需要付费</p>
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">

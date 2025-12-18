@@ -64,6 +64,8 @@ pub struct AIContext {
     pub subjects: Vec<String>,
     pub incomplete_tasks: Vec<String>,
     pub review_content: Option<String>,
+    #[serde(default)]
+    pub long_term_plans: Option<Vec<String>>,
 }
 
 /// AI 生成的任务建议

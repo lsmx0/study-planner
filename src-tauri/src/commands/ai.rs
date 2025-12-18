@@ -38,9 +38,10 @@ pub async fn test_ai_connection(session_token: String) -> Result<bool, String> {
 pub async fn generate_ai_plan(
     session_token: String,
     context: AIContext,
+    model_name: Option<String>,
 ) -> Result<Vec<TaskSuggestion>, String> {
     let user = auth_service::validate_session(&session_token).await?;
-    ai_service::generate_ai_plan(user.id, context).await
+    ai_service::generate_ai_plan(user.id, context, model_name).await
 }
 
 /// AI 聊天答疑

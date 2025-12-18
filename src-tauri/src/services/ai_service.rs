@@ -169,7 +169,7 @@ async fn get_recent_completed_tasks(user_id: i64, days: i32) -> Vec<String> {
 }
 
 /// 生成 AI 计划
-pub async fn generate_ai_plan(user_id: i64, context: AIContext) -> Result<Vec<TaskSuggestion>, String> {
+pub async fn generate_ai_plan(user_id: i64, context: AIContext, model_name: Option<String>) -> Result<Vec<TaskSuggestion>, String> {
     let pool = get_pool();
     
     let config: AIConfig = sqlx::query_as(
@@ -180,6 +180,9 @@ pub async fn generate_ai_plan(user_id: i64, context: AIContext) -> Result<Vec<Ta
     .fetch_one(pool)
     .await
     .map_err(|_| "请先配置 AI API".to_string())?;
+    
+    // 使用传入的模型名称，如果没有则使用配置的默认模型
+    let use_model = model_name.unwrap_or(config.model_name.clone());
 
     // 获取学习偏好
     let preference: Option<StudyPreference> = sqlx::query_as(
@@ -287,6 +290,17 @@ pub async fn generate_ai_plan(user_id: i64, context: AIContext) -> Result<Vec<Ta
         prompt.push_str(&format!("\n用户额外说明: {}\n", review));
     }
     
+    // 添加长期计划目标
+    if let Some(ref long_term_plans) = context.long_term_plans {
+        if !long_term_plans.is_empty() {
+            prompt.push_str("\n## 长期计划目标（请参考这些目标安排今日任务）:\n");
+            for plan in long_term_plans {
+                prompt.push_str(&format!("- {}\n", plan));
+            }
+            prompt.push_str("请确保今日任务能够推进这些长期目标的完成。\n");
+        }
+    }
+    
     prompt.push_str(r#"
 ## 输出要求：
 根据用户的学习时间和偏好，生成8-15个学习任务，覆盖全天有效学习时间，科目交替安排。
@@ -303,7 +317,7 @@ pub async fn generate_ai_plan(user_id: i64, context: AIContext) -> Result<Vec<Ta
     let client = Client::new();
     
     let request_body = serde_json::json!({
-        "model": config.model_name,
+        "model": use_model,
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 1000,
         "temperature": 0.7

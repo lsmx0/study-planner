@@ -197,6 +197,8 @@ export default function Pomodoro() {
   const [showSoundPanel, setShowSoundPanel] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const noiseSourceRef = useRef<{ source: AudioBufferSourceNode | null; gain: GainNode; filters?: BiquadFilterNode[] } | null>(null);
+  // 专注模式
+  const [focusMode, setFocusMode] = useState(false);
 
   const loadHistory = async () => {
     if (!sessionToken) return;
@@ -356,9 +358,14 @@ export default function Pomodoro() {
           <h1 className={`text-xl font-bold ${themeConfig.text}`}>🍅 番茄钟</h1>
           <p className={`${themeConfig.textSecondary} text-sm`}>专注学习，高效时间管理</p>
         </div>
-        <div className={`text-xs ${themeConfig.textSecondary} flex items-center gap-2`}>
-          <span className="px-2 py-1 bg-slate-700/50 rounded">空格</span> 开始/暂停
-          <span className="px-2 py-1 bg-slate-700/50 rounded">Esc</span> 取消
+        <div className="flex items-center gap-3">
+          <button onClick={() => setFocusMode(true)} className="px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all flex items-center gap-2">
+            🔒 专注模式
+          </button>
+          <div className={`text-xs ${themeConfig.textSecondary} flex items-center gap-2`}>
+            <span className="px-2 py-1 bg-slate-700/50 rounded">空格</span> 开始/暂停
+            <span className="px-2 py-1 bg-slate-700/50 rounded">Esc</span> 取消
+          </div>
         </div>
       </div>
 
@@ -537,6 +544,136 @@ export default function Pomodoro() {
           </div>
         </div>
       </div>
+
+      {/* 专注模式 - 全屏锁定界面 */}
+      {focusMode && (
+        <div className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center">
+          {/* 背景动画 */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          </div>
+
+          {/* 主内容 */}
+          <div className="relative z-10 text-center">
+            {/* 标题 */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-white mb-2">🔒 专注模式</h1>
+              <p className="text-slate-400">心无旁骛，全力以赴</p>
+            </div>
+
+            {/* 大计时器 */}
+            <div className="relative w-80 h-80 mx-auto mb-8">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle cx="160" cy="160" r="140" fill="none" stroke="#1e293b" strokeWidth="12" />
+                <circle cx="160" cy="160" r="140" fill="none" 
+                  stroke={mode === 'work' ? 'url(#focusWorkGrad)' : 'url(#focusBreakGrad)'} 
+                  strokeWidth="12" strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 140} 
+                  strokeDashoffset={2 * Math.PI * 140 * (1 - progress / 100)} 
+                  className="transition-all duration-1000" />
+                <defs>
+                  <linearGradient id="focusWorkGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#F43F5E" />
+                    <stop offset="100%" stopColor="#F97316" />
+                  </linearGradient>
+                  <linearGradient id="focusBreakGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#10B981" />
+                    <stop offset="100%" stopColor="#14B8A6" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className={`text-7xl font-bold font-mono ${mode === 'work' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  {formatTime(timeLeft)}
+                </div>
+                <div className="text-slate-400 mt-4 text-lg">
+                  {mode === 'work' ? '🎯 专注工作中' : '☕ 休息时间'}
+                </div>
+                {state === 'running' && (
+                  <div className="mt-2 flex items-center gap-2 text-slate-500">
+                    <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+                    计时进行中
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 控制按钮 */}
+            <div className="flex justify-center gap-4 mb-8">
+              {state === 'idle' && (
+                <button onClick={handleStart} 
+                  className={`px-12 py-4 rounded-2xl text-white text-xl font-bold transition-all hover:scale-105 shadow-2xl ${
+                    mode === 'work' ? 'bg-gradient-to-r from-rose-500 to-orange-500 shadow-rose-500/30' : 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-emerald-500/30'
+                  }`}>
+                  ▶ 开始专注
+                </button>
+              )}
+              {state === 'running' && (
+                <>
+                  <button onClick={handlePause} className="px-8 py-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-2xl text-lg font-bold shadow-2xl shadow-amber-500/30 hover:scale-105 transition-all">
+                    ⏸ 暂停
+                  </button>
+                  <button onClick={handleCancel} className="px-8 py-4 bg-slate-700 text-slate-300 rounded-2xl text-lg font-bold hover:bg-slate-600 transition-all">
+                    ✕ 放弃
+                  </button>
+                </>
+              )}
+              {state === 'paused' && (
+                <>
+                  <button onClick={handleResume} 
+                    className={`px-8 py-4 rounded-2xl text-white text-lg font-bold shadow-2xl hover:scale-105 transition-all ${
+                      mode === 'work' ? 'bg-gradient-to-r from-rose-500 to-orange-500 shadow-rose-500/30' : 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-emerald-500/30'
+                    }`}>
+                    ▶ 继续
+                  </button>
+                  <button onClick={handleCancel} className="px-8 py-4 bg-slate-700 text-slate-300 rounded-2xl text-lg font-bold hover:bg-slate-600 transition-all">
+                    ✕ 放弃
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* 白噪音控制 */}
+            <div className="flex justify-center gap-3 mb-8">
+              {WHITE_NOISE_SOUNDS.slice(0, 5).map(sound => (
+                <button key={sound.id} onClick={() => sound.id === 'none' ? stopSound() : playSound(sound.id)}
+                  className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all ${
+                    currentSound === sound.id ? 'bg-cyan-500/30 ring-2 ring-cyan-400' : 'bg-slate-800/50 hover:bg-slate-700/50'
+                  }`}>
+                  {sound.icon}
+                </button>
+              ))}
+            </div>
+
+            {/* 音量控制 */}
+            {currentSound !== 'none' && (
+              <div className="flex items-center justify-center gap-3 mb-8">
+                <span className="text-slate-400">🔊</span>
+                <input type="range" min="0" max="100" value={soundVolume} onChange={(e) => setSoundVolume(Number(e.target.value))} 
+                  className="w-48 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+                <span className="text-slate-400 w-12">{soundVolume}%</span>
+              </div>
+            )}
+
+            {/* 退出按钮 - 只有在空闲状态才能退出 */}
+            {state === 'idle' ? (
+              <button onClick={() => setFocusMode(false)} className="px-6 py-3 text-slate-400 hover:text-white transition-all flex items-center gap-2 mx-auto">
+                ← 退出专注模式
+              </button>
+            ) : (
+              <div className="text-slate-500 text-sm">
+                🔒 专注中无法退出，请先完成或放弃当前计时
+              </div>
+            )}
+          </div>
+
+          {/* 励志语句 */}
+          <div className="absolute bottom-8 left-0 right-0 text-center">
+            <p className="text-slate-500 text-sm">💡 专注是成功的关键，坚持就是胜利！</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

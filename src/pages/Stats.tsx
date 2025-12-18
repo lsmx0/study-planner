@@ -30,7 +30,7 @@ const ACHIEVEMENTS = [
   { id: 'rate_100', name: '完美主义', desc: '完成率达到100%', icon: '💯', check: (s: Statistics) => s.completion_rate >= 100 },
 ];
 
-const TIME_RANGES = [{ label: '7天', days: 7 }, { label: '14天', days: 14 }, { label: '30天', days: 30 }];
+const TIME_RANGES = [{ label: '7天', days: 7 }, { label: '14天', days: 14 }, { label: '30天', days: 30 }, { label: '90天', days: 90 }];
 
 export default function Stats() {
   const { sessionToken } = useAuthStore();
@@ -241,6 +241,66 @@ export default function Stats() {
                       <Bar dataKey="total_tasks" name="总任务" fill="#334155" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* 周对比 */}
+              {stats.daily_trend.length >= 7 && (
+                <div className={`lg:col-span-2 ${themeConfig.bgSecondary} rounded-xl border ${themeConfig.border} p-4`}>
+                  <h2 className={`${themeConfig.text} font-bold mb-4`}>📅 周数据对比</h2>
+                  {(() => {
+                    // 计算本周和上周数据
+                    const today = new Date();
+                    const dayOfWeek = today.getDay() || 7;
+                    const thisWeekStart = new Date(today);
+                    thisWeekStart.setDate(today.getDate() - dayOfWeek + 1);
+                    const lastWeekStart = new Date(thisWeekStart);
+                    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+                    
+                    const thisWeekData = stats.daily_trend.filter(d => {
+                      const date = new Date(d.date);
+                      return date >= thisWeekStart && date <= today;
+                    });
+                    const lastWeekData = stats.daily_trend.filter(d => {
+                      const date = new Date(d.date);
+                      return date >= lastWeekStart && date < thisWeekStart;
+                    });
+                    
+                    const thisWeekTasks = thisWeekData.reduce((sum, d) => sum + d.completed_tasks, 0);
+                    const lastWeekTasks = lastWeekData.reduce((sum, d) => sum + d.completed_tasks, 0);
+                    const thisWeekRate = thisWeekData.length > 0 ? thisWeekData.reduce((sum, d) => sum + d.completion_rate, 0) / thisWeekData.length : 0;
+                    const lastWeekRate = lastWeekData.length > 0 ? lastWeekData.reduce((sum, d) => sum + d.completion_rate, 0) / lastWeekData.length : 0;
+                    
+                    const taskChange = lastWeekTasks > 0 ? ((thisWeekTasks - lastWeekTasks) / lastWeekTasks * 100).toFixed(0) : 0;
+                    const rateChange = (thisWeekRate - lastWeekRate).toFixed(1);
+                    
+                    return (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl border border-cyan-500/20">
+                          <div className="text-sm text-slate-400 mb-2">本周完成任务</div>
+                          <div className="text-3xl font-bold text-cyan-400">{thisWeekTasks}</div>
+                          <div className={`text-sm mt-1 ${Number(taskChange) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {Number(taskChange) >= 0 ? '↑' : '↓'} {Math.abs(Number(taskChange))}% vs 上周
+                          </div>
+                        </div>
+                        <div className="p-4 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-xl border border-emerald-500/20">
+                          <div className="text-sm text-slate-400 mb-2">本周平均完成率</div>
+                          <div className="text-3xl font-bold text-emerald-400">{thisWeekRate.toFixed(0)}%</div>
+                          <div className={`text-sm mt-1 ${Number(rateChange) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {Number(rateChange) >= 0 ? '↑' : '↓'} {Math.abs(Number(rateChange))}% vs 上周
+                          </div>
+                        </div>
+                        <div className="p-4 bg-slate-700/30 rounded-xl border border-white/5">
+                          <div className="text-sm text-slate-400 mb-2">上周完成任务</div>
+                          <div className="text-2xl font-bold text-slate-300">{lastWeekTasks}</div>
+                        </div>
+                        <div className="p-4 bg-slate-700/30 rounded-xl border border-white/5">
+                          <div className="text-sm text-slate-400 mb-2">上周平均完成率</div>
+                          <div className="text-2xl font-bold text-slate-300">{lastWeekRate.toFixed(0)}%</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

@@ -327,26 +327,36 @@ function Dashboard() {
         {/* 左侧：快捷操作 */}
         <div className="lg:col-span-2 space-y-6">
           {/* 快捷功能卡片 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div onClick={() => navigate('/plan')} className={`${themeConfig.bgSecondary} backdrop-blur rounded-xl p-5 border ${themeConfig.border} cursor-pointer hover:opacity-80 transition-all group`}>
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">📋</div>
-              <h3 className={`${themeConfig.text} font-bold`}>学习规划</h3>
-              <p className={`${themeConfig.textSecondary} text-sm mt-1`}>规划任务 · AI生成</p>
+          <div className="grid grid-cols-3 gap-4">
+            <div onClick={() => navigate('/plan')} className={`${themeConfig.bgSecondary} backdrop-blur rounded-xl p-4 border ${themeConfig.border} cursor-pointer hover:opacity-80 transition-all group`}>
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">📋</div>
+              <h3 className={`${themeConfig.text} font-bold text-sm`}>学习规划</h3>
+              <p className={`${themeConfig.textSecondary} text-xs mt-1`}>规划任务</p>
             </div>
-            <div onClick={() => navigate('/ai-chat')} className={`${themeConfig.bgSecondary} backdrop-blur rounded-xl p-5 border ${themeConfig.border} cursor-pointer hover:opacity-80 transition-all group`}>
-              <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-xl flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🤖</div>
-              <h3 className={`${themeConfig.text} font-bold`}>AI 答疑</h3>
-              <p className={`${themeConfig.textSecondary} text-sm mt-1`}>有问题随时问</p>
+            <div onClick={() => navigate('/ai-chat')} className={`${themeConfig.bgSecondary} backdrop-blur rounded-xl p-4 border ${themeConfig.border} cursor-pointer hover:opacity-80 transition-all group`}>
+              <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-xl flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">🤖</div>
+              <h3 className={`${themeConfig.text} font-bold text-sm`}>AI 答疑</h3>
+              <p className={`${themeConfig.textSecondary} text-xs mt-1`}>随时问</p>
             </div>
-            <div onClick={() => navigate('/stats')} className={`${themeConfig.bgSecondary} backdrop-blur rounded-xl p-5 border ${themeConfig.border} cursor-pointer hover:opacity-80 transition-all group`}>
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-500 rounded-xl flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">📊</div>
-              <h3 className={`${themeConfig.text} font-bold`}>学习统计</h3>
-              <p className={`${themeConfig.textSecondary} text-sm mt-1`}>数据分析</p>
+            <div onClick={() => navigate('/wrong-notes')} className={`${themeConfig.bgSecondary} backdrop-blur rounded-xl p-4 border ${themeConfig.border} cursor-pointer hover:opacity-80 transition-all group`}>
+              <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-pink-500 rounded-xl flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">❌</div>
+              <h3 className={`${themeConfig.text} font-bold text-sm`}>错题本</h3>
+              <p className={`${themeConfig.textSecondary} text-xs mt-1`}>记录错题</p>
             </div>
-            <div onClick={() => navigate('/review')} className={`${themeConfig.bgSecondary} backdrop-blur rounded-xl p-5 border ${themeConfig.border} cursor-pointer hover:opacity-80 transition-all group`}>
-              <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-xl flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">📝</div>
-              <h3 className={`${themeConfig.text} font-bold`}>每日复盘</h3>
-              <p className={`${themeConfig.textSecondary} text-sm mt-1`}>总结反思</p>
+            <div onClick={() => navigate('/stats')} className={`${themeConfig.bgSecondary} backdrop-blur rounded-xl p-4 border ${themeConfig.border} cursor-pointer hover:opacity-80 transition-all group`}>
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-500 rounded-xl flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">📊</div>
+              <h3 className={`${themeConfig.text} font-bold text-sm`}>学习统计</h3>
+              <p className={`${themeConfig.textSecondary} text-xs mt-1`}>数据分析</p>
+            </div>
+            <div onClick={() => navigate('/review')} className={`${themeConfig.bgSecondary} backdrop-blur rounded-xl p-4 border ${themeConfig.border} cursor-pointer hover:opacity-80 transition-all group`}>
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-xl flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">📝</div>
+              <h3 className={`${themeConfig.text} font-bold text-sm`}>每日复盘</h3>
+              <p className={`${themeConfig.textSecondary} text-xs mt-1`}>总结反思</p>
+            </div>
+            <div onClick={() => navigate('/countdown')} className={`${themeConfig.bgSecondary} backdrop-blur rounded-xl p-4 border ${themeConfig.border} cursor-pointer hover:opacity-80 transition-all group`}>
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-500 rounded-xl flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">⏱️</div>
+              <h3 className={`${themeConfig.text} font-bold text-sm`}>倒计时</h3>
+              <p className={`${themeConfig.textSecondary} text-xs mt-1`}>考试提醒</p>
             </div>
           </div>
 

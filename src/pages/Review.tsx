@@ -22,6 +22,7 @@ export default function Review() {
   const [history, setHistory] = useState<DailyReview[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewingReview, setViewingReview] = useState<DailyReview | null>(null);
 
   const loadTasks = async () => {
     if (!sessionToken) return;
@@ -160,10 +161,15 @@ export default function Review() {
             : (
               <div className="space-y-2">
                 {history.map((item) => (
-                  <div key={item.id} onClick={() => setSelectedDate(item.review_date)}
-                    className={`p-3 rounded-lg border cursor-pointer transition-all ${item.review_date === selectedDate ? 'border-emerald-500 bg-emerald-500/10' : 'border-white/5 hover:border-white/10'}`}>
-                    <div className="font-medium text-white text-sm">{new Date(item.review_date).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}</div>
-                    {item.feelings && <div className="text-xs text-slate-500 mt-1 line-clamp-2">{item.feelings}</div>}
+                  <div key={item.id} className={`p-3 rounded-lg border transition-all ${item.review_date === selectedDate ? 'border-emerald-500 bg-emerald-500/10' : 'border-white/5 hover:border-white/10'}`}>
+                    <div className="flex justify-between items-start">
+                      <div className="font-medium text-white text-sm">{new Date(item.review_date).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}</div>
+                      <div className="flex gap-1">
+                        <button onClick={() => setViewingReview(item)} className="px-2 py-1 text-xs bg-cyan-500/20 text-cyan-400 rounded hover:bg-cyan-500/30 transition-all">查看</button>
+                        <button onClick={() => setSelectedDate(item.review_date)} className="px-2 py-1 text-xs bg-violet-500/20 text-violet-400 rounded hover:bg-violet-500/30 transition-all">编辑</button>
+                      </div>
+                    </div>
+                    {item.feelings && <div className="text-xs text-slate-500 mt-2 line-clamp-2">{item.feelings}</div>}
                   </div>
                 ))}
               </div>
@@ -171,6 +177,62 @@ export default function Review() {
           </div>
         </div>
       </div>
+
+      {/* 查看详情弹窗 */}
+      {viewingReview && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className={`${themeConfig.bgSecondary} rounded-2xl shadow-2xl w-full max-w-lg p-6 m-4 border ${themeConfig.border} max-h-[80vh] overflow-y-auto`}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className={`text-xl font-bold ${themeConfig.text}`}>
+                📝 {new Date(viewingReview.review_date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+              </h3>
+              <button onClick={() => setViewingReview(null)} className={`${themeConfig.textSecondary} hover:${themeConfig.text} text-xl`}>✕</button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className={`p-4 rounded-xl ${themeConfig.bg} border ${themeConfig.border}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">😊</span>
+                  <span className={`font-medium ${themeConfig.text}`}>感受和收获</span>
+                </div>
+                <p className={`${themeConfig.textSecondary} text-sm whitespace-pre-wrap`}>
+                  {viewingReview.feelings || '（未填写）'}
+                </p>
+              </div>
+              
+              <div className={`p-4 rounded-xl ${themeConfig.bg} border ${themeConfig.border}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">🤔</span>
+                  <span className={`font-medium ${themeConfig.text}`}>困难和问题</span>
+                </div>
+                <p className={`${themeConfig.textSecondary} text-sm whitespace-pre-wrap`}>
+                  {viewingReview.difficulties || '（未填写）'}
+                </p>
+              </div>
+
+              {viewingReview.ai_suggestions && (
+                <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">🤖</span>
+                    <span className="font-medium text-violet-400">AI 建议</span>
+                  </div>
+                  <p className="text-violet-300 text-sm whitespace-pre-wrap">{viewingReview.ai_suggestions}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => { setSelectedDate(viewingReview.review_date); setViewingReview(null); }}
+                className="px-4 py-2 bg-violet-500/20 text-violet-400 rounded-lg hover:bg-violet-500/30 transition-all">
+                ✏️ 编辑此复盘
+              </button>
+              <button onClick={() => setViewingReview(null)} className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-all">
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

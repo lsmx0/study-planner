@@ -53,10 +53,39 @@ const saveStyles = (styles: Record<number, CountdownStyle>) => {
   localStorage.setItem('countdown-styles', JSON.stringify(styles));
 };
 
+// 计算剩余时间或已过去时间
+const calcTimeDisplay = (targetTime: string) => {
+  const diff = new Date(targetTime).getTime() - Date.now();
+  const absDiff = Math.abs(diff);
+  const days = Math.floor(absDiff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((absDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const mins = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (diff <= 0) {
+    // 已过期 - 显示正计时（已过去多久）
+    if (days > 0) return { text: `${days} 天`, isCountUp: true, label: '已过去' };
+    if (hours > 0) return { text: `${hours} 小时`, isCountUp: true, label: '已过去' };
+    return { text: `${mins} 分钟`, isCountUp: true, label: '已过去' };
+  } else {
+    // 未过期 - 显示倒计时
+    if (days > 0) return { text: `${days} 天`, isCountUp: false, label: '剩余' };
+    if (hours > 0) return { text: `${hours} 小时`, isCountUp: false, label: '剩余' };
+    return { text: `${mins} 分钟`, isCountUp: false, label: '剩余' };
+  }
+};
+
 // 计算子倒计时剩余时间
 const calcSubRemaining = (targetTime: string) => {
   const diff = new Date(targetTime).getTime() - Date.now();
-  if (diff <= 0) return { text: '已到期', expired: true };
+  if (diff <= 0) {
+    // 正计时
+    const absDiff = Math.abs(diff);
+    const days = Math.floor(absDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((absDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (days > 0) return { text: `+${days}天${hours}时`, expired: true };
+    const mins = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
+    return { text: `+${hours}时${mins}分`, expired: true };
+  }
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   if (days > 0) return { text: `${days}天${hours}时`, expired: false };
@@ -176,15 +205,26 @@ export default function Countdown() {
     setStyles(newStyles); saveStyles(newStyles);
   };
 
+  // 格式化显示时间（支持正计时和倒计时）
   const formatRemaining = (c: CountdownResponse) => {
-    if (c.is_expired) return '已到期';
-    if (c.remaining_days > 0) return `${c.remaining_days} 天`;
-    if (c.remaining_hours > 0) return `${c.remaining_hours} 小时`;
-    return `${c.remaining_minutes} 分钟`;
+    const timeInfo = calcTimeDisplay(c.target_time);
+    return timeInfo.text;
+  };
+
+  // 获取时间类型标签
+  const getTimeLabel = (c: CountdownResponse) => {
+    const timeInfo = calcTimeDisplay(c.target_time);
+    return timeInfo.label;
+  };
+
+  // 判断是否为正计时
+  const isCountUp = (c: CountdownResponse) => {
+    return calcTimeDisplay(c.target_time).isCountUp;
   };
 
   const getStyle = (c: CountdownResponse, i: number) => {
-    if (c.is_expired) return { color: 'from-slate-600 to-slate-700', bgImage: '' };
+    // 正计时使用不同的颜色风格
+    if (isCountUp(c)) return { color: 'from-slate-500 to-slate-600', bgImage: styles[c.id]?.bgImage || '' };
     const stored = styles[c.id];
     if (stored) return stored;
     return { color: PRESET_COLORS[i % PRESET_COLORS.length].gradient, bgImage: '' };
@@ -230,9 +270,15 @@ export default function Countdown() {
                         <button onClick={() => setDeleteCountdown(c)} className="w-7 h-7 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition text-sm">✕</button>
                       </div>
                     </div>
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className={`text-xs px-2 py-0.5 rounded ${isCountUp(c) ? 'bg-amber-500/30 text-amber-300' : 'bg-emerald-500/30 text-emerald-300'}`}>
+                        {isCountUp(c) ? '⏱️ 正计时' : '⏳ 倒计时'}
+                      </span>
+                      <span className="text-white/60 text-xs">{getTimeLabel(c)}</span>
+                    </div>
                     <div className="text-5xl font-black mb-3 group-hover:scale-105 transition-transform">{formatRemaining(c)}</div>
                     <div className="text-white/70 text-sm flex items-center gap-1">📅 {new Date(c.target_time).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-                    {c.notify_enabled && !c.is_expired && <div className="mt-2 text-xs text-white/60">🔔 到期提醒已开启</div>}
+                    {c.notify_enabled && !isCountUp(c) && <div className="mt-2 text-xs text-white/60">🔔 到期提醒已开启</div>}
                     {/* 子倒计时预览 */}
                     {subs.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-white/20">
